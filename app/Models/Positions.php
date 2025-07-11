@@ -9,10 +9,10 @@ class Positions extends Model
 {
     use HasFactory;
 
-    protected $table ='positions';
+    protected $table = 'positions';
     protected $primaryKey = 'uuid';
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable =['name'];
+    protected $fillable = ['uuid', 'name'];
 }

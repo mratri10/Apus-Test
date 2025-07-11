@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Users extends Model
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Users extends Authenticatable
 {
     use HasFactory;
 
@@ -15,17 +16,19 @@ class Users extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'uuid',
         'name',
         'username',
         'password',
     ];
-    protected $hidden =['password',];
+    protected $hidden = ['password',];
 
-    public function tasks(){
-        return $this->hasMany(Tasks::class, 'user_id','uuid');
+    public function tasks()
+    {
+        return $this->hasMany(Tasks::class, 'user_id', 'uuid');
     }
-    public function positions(){
+    public function positions()
+    {
         return $this->belongsToMany(Positions::class, 'user_positions', 'user_id', 'position_id', 'uuid', 'uuid');
     }
-
 }

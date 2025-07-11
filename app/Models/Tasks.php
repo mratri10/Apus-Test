@@ -9,12 +9,13 @@ class Tasks extends Model
 {
     use HasFactory;
 
-    protected $table ='tasks';
+    protected $table = 'tasks';
     protected $primaryKey = 'uuid';
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable =[
+    protected $fillable = [
+        'uuid',
         'todo',
         'user_id',
     ];

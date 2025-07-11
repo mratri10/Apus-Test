@@ -9,12 +9,13 @@ class UserPositions extends Model
 {
     use HasFactory;
 
-    protected $table ='user_positions';
+    protected $table = 'user_positions';
     protected $primaryKey = 'uuid';
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable =[
+    protected $fillable = [
+        'uuid',
         'user_id',
         'position_id',
     ];
