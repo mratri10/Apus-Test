@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Dashboard\PositionController;
+use App\Http\Controllers\Dashboard\TaskController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Dashboard\UserPositionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,18 +21,9 @@ use Inertia\Inertia;
 |
 */
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard/Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisterController::class, 'create'])->name('register');
@@ -38,5 +33,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+Route::post('/positions', [PositionController::class, 'store']);
+Route::delete('/positions/{uuid}', [PositionController::class, 'destroy']);
+Route::put('/positions/{uuid}', [PositionController::class, 'update']);
+Route::post('/user-positions', [UserPositionController::class, 'store']);
 
+Route::post('/tasks', [TaskController::class, 'store']);
+Route::delete('/tasks/{uuid}', [TaskController::class, 'destroy']);
+Route::put('/tasks/{uuid}', [TaskController::class, 'update']);
 // require __DIR__.'/auth.php';

@@ -1,21 +1,25 @@
-<script setup lang="ts">
+<script setup>
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
-
-interface User {
-    uuid: string;
-    name: string
-}
+import { router, useForm } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 
 const form = useForm({
     todo: '',
-    userId: 0
-})
-const users = computed(() => usePage().props.users as User[]);
+    userId: "",
+    positionId: ""
+});
+
+const props = defineProps({
+    users: Array,
+    positions: Array,
+});
+
+const localUsers = ref([...props.users]);
+const positions = props.positions
+
 const emit = defineEmits(['close']);
 function submit() {
     form.post('/tasks', {
@@ -28,6 +32,7 @@ function submit() {
 function onClose() {
     emit('close')
 }
+
 </script>
 
 <template>
@@ -36,12 +41,18 @@ function onClose() {
             <div class="flex justify-end">
                 <button type="button" @click="onClose">Tutup Form</button>
             </div>
+
             <form @submit.prevent="submit">
-                <div>
+                <div class="mt-2">
                     <InputLabel for="user_id" value="User" />
                     <select id="user_id" v-model="form.userId" class="mt-1 block w-full">
-                        <option v-for="user in users" :key="user.uuid" :value="user.uuid">
-                            {{ user.name }}
+                        <option v-for="user in localUsers" :key="user.uuid" :value="user.uuid">
+                            <div class="flex flex-wrap w-full justify-between">
+                                <div>
+                                    {{ user.name }} -
+                                </div>
+                                <div> {{ user.position }}</div>
+                            </div>
                         </option>
                     </select>
                     <InputError :message="form.errors.userId" />

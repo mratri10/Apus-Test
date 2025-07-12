@@ -1,43 +1,81 @@
-<script setup lang="ts">
+<script setup>
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import { router, usePage } from '@inertiajs/vue3';
-import { reactive } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 
-interface Users {
-    uuid: string;
-    name: string;
+const emit = defineEmits(['close', 'users', 'positions']);
+const props = defineProps({
+    users: Array,
+    positions: Array,
+});
+const localUsers = ref([...props.users]);
+const positions = props.positions
+
+const userName = ref('');
+const userId = ref('');
+
+const selectUser = (userData) => {
+    userName.value = userData.name
+    userId.value = userData.uuid
 }
-interface Positions {
-    uuid: string;
-    name: string;
-}
-
-const users = usePage().props.users as Users[];
-const positions = usePage().props.positions as Positions[];
-
-const positionsForm = reactive({})
-function submit(userId) {
+const postPositionUser = (id, positionId) => {
     router.post('/user-positions', {
-        user_id: userId,
-        position_id: positionsForm[userId]
+        userId: id,
+        positionId: positionId
+    }, {
+        onSuccess: () => {
+            setTimeout(() => {
+                router.reload({
+                    only: ['users'],
+                    preserveState: true,
+                    preserveScroll: true,
+                });
+            }, 100);
+            userName.value = "";
+        }
     })
 }
+
+watch(
+    () => props.users,
+    (newVal) => {
+        localUsers.value = [...newVal];
+    }
+);
+watch(() => props.users, (newVal) => {
+    localUsers.value = [...newVal];
+});
 </script>
 
 <template>
-    <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center">
-        <GuestLayout>
-            <div v-for="user in users" :key="user.uuid" class="mb-4 border p-4 rounded">
-                <div>{{ user.name }}</div>
-                <form @submit.prevent="submit(user.uuid)" class="mt-2 block w-full">
-                    <option value="">Select Position</option>
-                    <option v-for="position in positions" :key="position.uuid" :value="position.uuid">
-                        {{ position.name }}
-                    </option>
-                    <PrimaryButton class="mt-2">Assign Position</PrimaryButton>
-                </form>
+    <div class="bg-white w-2/3 rounded-lg shadow-lg overflow-auto p-6 relative">
+        <div class="h-2/3">
+            <div class="flex justify-end">
+                <button type="button" @click="emit('close')">Tutup Form</button>
             </div>
-        </GuestLayout>
+            <div v-for="user in localUsers" :key="user.uuid"
+                class="mb-4 border p-2 rounded flex justify-between w-full">
+                <div>{{ user.name }} - {{ user.position }}</div>
+                <PrimaryButton @click="selectUser(user)" v-if="user.position == null">Pilih Posisi</PrimaryButton>
+                <PrimaryButton @click="selectUser(user)" v-else>Ubah Posisi</PrimaryButton>
+            </div>
+        </div>
+        <div v-if="userName" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center">
+            <div class="bg-white w-1/3 rounded-lg shadow-lg overflow-auto p-6 relative">
+                <div>
+                    <div class="flex justify-between">
+                        <div>{{ userName }}</div>
+                        <button type="button" @click="userName = ''">Tutup Form</button>
+                    </div>
+                    <div class="pt-4">
+                        <span>Pilih Posisi Karyawan</span>
+                    </div>
+                    <button @click="postPositionUser(userId, position.uuid)" v-for="position in positions"
+                        :key="position.uuid" class="p-2 border rounded w-full flex justify-start items-center mb-1">
+                        <span>{{ position.name }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>

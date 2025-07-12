@@ -21,7 +21,7 @@ class Users extends Authenticatable
         'username',
         'password',
     ];
-    protected $hidden = ['password',];
+    protected $hidden = ['password'];
 
     public function tasks()
     {
