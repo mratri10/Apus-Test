@@ -32,14 +32,13 @@ Saya terbiasa bekerja dari perencanaan sistem, integrasi API, pengujian, hingga 
 - **Database:** MySQL, PostgreSQL, SQLite
 - **Tools & Others:** Git, GitHub, Postman, Figma, Swagger, Docker (basic), CI/CD, Firebase, OpenResty
 
----
-
+<!-- 
 ## 📈 GitHub Stats
 
 <p align="center">
   <img src="https://github-readme-stats.vercel.app/api?username=mratri10&show_icons=true&theme=default" width="48%" />
   <img src="https://github-readme-streak-stats.herokuapp.com/?user=mratri10&theme=default" width="48%" />
-</p>
+</p> -->
 
 ---
 
