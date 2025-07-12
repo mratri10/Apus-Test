@@ -45,18 +45,15 @@ function onClose() {
             <form @submit.prevent="submit">
                 <div class="mt-2">
                     <InputLabel for="user_id" value="User" />
-                    <select id="user_id" v-model="form.userId" class="mt-1 block w-full">
+                    <select id="user_id" v-model="form.userId" class="mt-1 block w-full border rounded p-2">
+                        <option disabled value="">-- Pilih User --</option>
                         <option v-for="user in localUsers" :key="user.uuid" :value="user.uuid">
-                            <div class="flex flex-wrap w-full justify-between">
-                                <div>
-                                    {{ user.name }} -
-                                </div>
-                                <div> {{ user.position }}</div>
-                            </div>
+                            {{ user.name }} - {{ user.position ?? 'Tidak Ada Posisi' }}
                         </option>
                     </select>
                     <InputError :message="form.errors.userId" />
                 </div>
+
                 <div class="mt-4">
                     <InputLabel for="todo" value="Tugas" />
                     <TextInput id="todo" v-model="form.todo" type="text" required class="w-full mb-4"

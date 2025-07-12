@@ -127,7 +127,7 @@ watch(() => usePage().props.tasks,
                                 </div>
                                 <div class="w-50 w-full">
                                     <p class="text-xs text-gray-400 truncate w-48">{{ todo.uuid }}</p>
-                                    <h3 class="text-lg font-semibold text-gray-800 mt-1">{{ todo.todo }}</h3>
+                                    <h3 class="text-lg font-semibold text-gray-800 mt-1 mr-2">{{ todo.todo }}</h3>
                                     <div class="flex justify-between items-center mt-4 text-sm text-gray-500">
                                         <span>{{ todo.name }}</span>
                                         <div class=" w-20">
