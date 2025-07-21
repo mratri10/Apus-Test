@@ -1,75 +1,83 @@
-name: Laravel CI/CD
-
-permissions:
-  contents: read
+name: Laravel Deployment
 
 on:
   push:
     branches:
-      - main
+      - main  # Change this to your default branch (e.g., master)
 
 jobs:
-  deploy:
+  laravel-deploy:
+    name: Deploy Laravel App
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # 1. Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.4
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # 2. Set up PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, intl, pdo, pgsql
+          coverage: none
 
-    - name: Deploy to Server via SSH
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-          set -e
+      # 3. Cache Composer packages
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
 
-          echo "🛠 Ensuring project directory exists..."
-          mkdir -p ${{ secrets.DEPLOY_PATH }}
-          cd ${{ secrets.DEPLOY_PATH }}
+      # 4. Install Composer dependencies
+      - name: Install Dependencies
+        run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
 
-          if [ ! -d ".git" ]; then
-            echo "📦 Cloning repo..."
-            git clone git@github.com:${{ github.repository }} ./
-          else
-            echo "🔄 Pulling latest code..."
-            git pull origin main
-          fi
+      # 5. Copy .env.example to .env (if needed)
+      - name: Prepare Environment
+        run: cp .env.example .env
 
-          echo "🔐 Writing .env file..."
-          cat <<EOT > .env
-          APP_NAME=Laravel
-          APP_ENV=production
-          APP_KEY=
-          APP_DEBUG=false
-          APP_URL=http://localhost:2601
+      # 6. Generate Laravel key
+      - name: Generate App Key
+        run: php artisan key:generate
 
-          DB_CONNECTION=pgsql
-          DB_HOST=127.0.0.1
-          DB_PORT=5432
-          DB_DATABASE=${{ secrets.DB_DATABASE }}
-          DB_USERNAME=${{ secrets.DB_USERNAME }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+      # 7. Run migrations (optional, if using DB in test)
+      - name: Run Migrations
+        run: php artisan migrate --force
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: your_database
+          DB_USERNAME: your_username
+          DB_PASSWORD: your_password
 
-          CACHE_DRIVER=file
-          SESSION_DRIVER=file
-          QUEUE_CONNECTION=sync
-          EOT
-
-          echo "📦 Installing PHP dependencies..."
-          composer install --no-dev --optimize-autoloader
-
-          echo "🔨 Running Laravel setup..."
+      # 8. Clear and cache config
+      - name: Clear & Cache Config
+        run: |
           php artisan config:clear
+          php artisan cache:clear
+          php artisan route:clear
+          php artisan view:clear
           php artisan config:cache
-          php artisan key:generate
-          php artisan migrate --force
 
-          echo "⚙️ Installing Node and building assets..."
-          npm install
-          npm run build
-
-          echo "✅ Deployment complete!"
-        EOF
+      # 9. Deploy via SSH (example only — customize)
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            cd /var/www/todo-system
+            git pull origin main
+            composer install --no-interaction --prefer-dist --optimize-autoloader
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            sudo systemctl restart php8.3-fpm
+            sudo systemctl restart nginx
