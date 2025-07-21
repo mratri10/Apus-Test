@@ -1,116 +1,75 @@
 name: Laravel CI/CD
 
+permissions:
+  contents: read
+
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  laravel-ci:
-
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: ${{ secrets.DB_USERNAME }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_DATABASE }}
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      APP_ENV: testing
-      APP_NAME: Laravel
-      APP_URL: http://localhost:2601
-      DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_DATABASE: ${{ secrets.DB_DATABASE }}
-      DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: pdo_pgsql
-        coverage: none
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install Composer dependencies
-      run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-    - name: Install NPM dependencies
-      run: npm install
-
-    - name: Build frontend
-      run: npm run build
-
-    - name: Create .env file
-      run: |
-        echo "APP_NAME=${{ env.APP_NAME }}" >> .env
-        echo "APP_ENV=${{ env.APP_ENV }}" >> .env
-        echo "APP_KEY=" >> .env
-        echo "APP_DEBUG=true" >> .env
-        echo "APP_URL=${{ env.APP_URL }}" >> .env
-        echo "LOG_CHANNEL=stack" >> .env
-        echo "LOG_LEVEL=debug" >> .env
-        echo "DB_CONNECTION=${{ env.DB_CONNECTION }}" >> .env
-        echo "DB_HOST=${{ env.DB_HOST }}" >> .env
-        echo "DB_PORT=${{ env.DB_PORT }}" >> .env
-        echo "DB_DATABASE=${{ env.DB_DATABASE }}" >> .env
-        echo "DB_USERNAME=${{ env.DB_USERNAME }}" >> .env
-        echo "DB_PASSWORD=${{ env.DB_PASSWORD }}" >> .env
-        echo "CACHE_DRIVER=file" >> .env
-        echo "SESSION_DRIVER=file" >> .env
-        echo "QUEUE_CONNECTION=sync" >> .env
-
-    - name: Generate app key
-      run: php artisan key:generate
-
-    - name: Run migrations
-      run: php artisan migrate --force
-
   deploy:
-    needs: laravel-ci
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
-    - name: Setup SSH connection
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Deploy to server
+    - name: Deploy to Server via SSH
       run: |
-        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << EOF
+        ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          set -e
+
+          echo "🛠 Ensuring project directory exists..."
+          mkdir -p ${{ secrets.DEPLOY_PATH }}
           cd ${{ secrets.DEPLOY_PATH }}
-          git pull origin main
+
+          if [ ! -d ".git" ]; then
+            echo "📦 Cloning repo..."
+            git clone git@github.com:${{ github.repository }} ./
+          else
+            echo "🔄 Pulling latest code..."
+            git pull origin main
+          fi
+
+          echo "🔐 Writing .env file..."
+          cat <<EOT > .env
+          APP_NAME=Laravel
+          APP_ENV=production
+          APP_KEY=
+          APP_DEBUG=false
+          APP_URL=http://localhost:2601
+
+          DB_CONNECTION=pgsql
+          DB_HOST=127.0.0.1
+          DB_PORT=5432
+          DB_DATABASE=${{ secrets.DB_DATABASE }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+          CACHE_DRIVER=file
+          SESSION_DRIVER=file
+          QUEUE_CONNECTION=sync
+          EOT
+
+          echo "📦 Installing PHP dependencies..."
           composer install --no-dev --optimize-autoloader
+
+          echo "🔨 Running Laravel setup..."
+          php artisan config:clear
+          php artisan config:cache
+          php artisan key:generate
           php artisan migrate --force
+
+          echo "⚙️ Installing Node and building assets..."
           npm install
           npm run build
-          php artisan config:cache
-          php artisan route:cache
+
+          echo "✅ Deployment complete!"
         EOF
