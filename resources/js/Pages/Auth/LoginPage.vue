@@ -76,7 +76,7 @@ function register() {
                             type="password" required class="w-full" />
                         <InputError :message="registerForm.errors.password_confirmation" />
                     </div>
-                    <PrimaryButton :disabled="registerForm.processing" class="w-full">Register</PrimaryButton>
+                    <PrimaryButton :disabled="registerForm.processing" class="w-full">Register1</PrimaryButton>
                 </form>
             </div>
 
