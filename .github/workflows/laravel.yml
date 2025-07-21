@@ -31,7 +31,7 @@ jobs:
       APP_NAME: Laravel
       APP_URL: http://localhost
       DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
+      DB_HOST: 167.99.76.27
       DB_PORT: 5432
       DB_DATABASE: ${{ secrets.DB_DATABASE }}
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
