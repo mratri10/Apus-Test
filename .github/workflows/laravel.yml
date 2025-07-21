@@ -24,6 +24,7 @@ jobs:
             cd /var/www/todo-system
 
             echo "🔄 Pulling latest code..."
+            git checkout main
             git pull origin main
 
             echo "📦 Installing dependencies..."
