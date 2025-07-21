@@ -1,83 +1,68 @@
-name: Laravel Deployment
+name: Laravel CI
 
 on:
   push:
     branches:
-      - main  # Change this to your default branch (e.g., master)
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  laravel-deploy:
-    name: Deploy Laravel App
+  laravel-ci:
     runs-on: ubuntu-latest
 
-    steps:
-      # 1. Checkout the code
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mydb
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-      # 2. Set up PHP
-      - name: Setup PHP
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: mydb
+      DB_USERNAME: myuser
+      DB_PASSWORD: mypassword
+      APP_ENV: testing
+      APP_KEY: base64:8XQkUj4+5sM1nXkD3Z0eCrR2kRu0JpOd1FvA9+8AV1g= # or use `php artisan key:generate --show`
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, bcmath, intl, pdo, pgsql
+          php-version: 8.3
+          extensions: mbstring, pdo, pdo_pgsql, pgsql, xml, bcmath, ctype, fileinfo, json, tokenizer, zip
           coverage: none
 
-      # 3. Cache Composer packages
-      - name: Cache Composer Dependencies
-        uses: actions/cache@v3
-        with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
 
-      # 4. Install Composer dependencies
-      - name: Install Dependencies
-        run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
-
-      # 5. Copy .env.example to .env (if needed)
-      - name: Prepare Environment
+      - name: Copy .env
         run: cp .env.example .env
 
-      # 6. Generate Laravel key
-      - name: Generate App Key
+      - name: Generate application key
         run: php artisan key:generate
 
-      # 7. Run migrations (optional, if using DB in test)
-      - name: Run Migrations
-        run: php artisan migrate --force
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: your_database
-          DB_USERNAME: your_username
-          DB_PASSWORD: your_password
-
-      # 8. Clear and cache config
-      - name: Clear & Cache Config
+      - name: Wait for PostgreSQL
         run: |
-          php artisan config:clear
-          php artisan cache:clear
-          php artisan route:clear
-          php artisan view:clear
-          php artisan config:cache
+          until pg_isready -h 127.0.0.1 -p 5432 -U myuser; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
 
-      # 9. Deploy via SSH (example only — customize)
-      - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: 22
-          script: |
-            cd /var/www/todo-system
-            git pull origin main
-            composer install --no-interaction --prefer-dist --optimize-autoloader
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            sudo systemctl restart php8.3-fpm
-            sudo systemctl restart nginx
+      - name: Run migrations
+        run: php artisan migrate --force
