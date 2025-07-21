@@ -29,21 +29,13 @@ jobs:
     env:
       APP_ENV: testing
       APP_NAME: Laravel
-      APP_URL: http://localhost
+      APP_URL: http://localhost:2601
       DB_CONNECTION: pgsql
-      DB_HOST: 167.99.76.27
+      DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_DATABASE: ${{ secrets.DB_DATABASE }}
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_USERNAME: null
-      MAIL_PASSWORD: null
-      MAIL_ENCRYPTION: null
-      MAIL_FROM_ADDRESS: hello@example.com
-      MAIL_FROM_NAME: Laravel
 
     steps:
     - name: Checkout code
@@ -67,7 +59,7 @@ jobs:
     - name: Install NPM dependencies
       run: npm install
 
-    - name: Compile assets
+    - name: Build frontend
       run: npm run build
 
     - name: Create .env file
@@ -88,14 +80,40 @@ jobs:
         echo "CACHE_DRIVER=file" >> .env
         echo "SESSION_DRIVER=file" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
-        echo "MAIL_MAILER=${{ env.MAIL_MAILER }}" >> .env
-        echo "MAIL_HOST=${{ env.MAIL_HOST }}" >> .env
-        echo "MAIL_PORT=${{ env.MAIL_PORT }}" >> .env
-        echo "MAIL_FROM_ADDRESS=${{ env.MAIL_FROM_ADDRESS }}" >> .env
-        echo "MAIL_FROM_NAME=${{ env.MAIL_FROM_NAME }}" >> .env
 
     - name: Generate app key
       run: php artisan key:generate
 
     - name: Run migrations
       run: php artisan migrate --force
+
+    - name: Run tests
+      run: php artisan test
+
+  deploy:
+    needs: laravel-ci
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH connection
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to server
+      run: |
+        ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << EOF
+          cd ${{ secrets.DEPLOY_PATH }}
+          git pull origin main
+          composer install --no-dev --optimize-autoloader
+          php artisan migrate --force
+          npm install
+          npm run build
+          php artisan config:cache
+          php artisan route:cache
+        EOF
