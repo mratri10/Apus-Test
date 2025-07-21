@@ -15,6 +15,7 @@ const form = useForm({
 const props = defineProps({
     users: Array,
     positions: Array,
+    disabled: Boolean
 });
 
 const localUsers = ref([...props.users]);
@@ -61,7 +62,12 @@ function onClose() {
                     <InputError :message="form.errors.todo" />
                 </div>
                 <div class="flex justify-center">
-                    <PrimaryButton :disabled="form.progress">Create Task</PrimaryButton>
+                    <h2 v-if="form.processing">
+                        Processing...
+                    </h2>
+                    <PrimaryButton v-else :disable="form.processing">
+                        Create Task
+                    </PrimaryButton>
                 </div>
             </form>
         </div>

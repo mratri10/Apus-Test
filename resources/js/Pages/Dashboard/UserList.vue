@@ -13,12 +13,14 @@ const positions = props.positions
 
 const userName = ref('');
 const userId = ref('');
+const process = ref(false);
 
 const selectUser = (userData) => {
     userName.value = userData.name
     userId.value = userData.uuid
 }
 const postPositionUser = (id, positionId) => {
+    process.value = true
     router.post('/user-positions', {
         userId: id,
         positionId: positionId
@@ -32,6 +34,7 @@ const postPositionUser = (id, positionId) => {
                 });
             }, 100);
             userName.value = "";
+            process.value = false
         }
     })
 }
@@ -59,6 +62,7 @@ watch(() => props.users, (newVal) => {
                 <PrimaryButton @click="selectUser(user)" v-if="user.position == null">Pilih Posisi</PrimaryButton>
                 <PrimaryButton @click="selectUser(user)" v-else>Ubah Posisi</PrimaryButton>
             </div>
+
         </div>
         <div v-if="userName" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center">
             <div class="bg-white w-1/3 rounded-lg shadow-lg overflow-auto p-6 relative">
@@ -74,6 +78,9 @@ watch(() => props.users, (newVal) => {
                         :key="position.uuid" class="p-2 border rounded w-full flex justify-start items-center mb-1">
                         <span>{{ position.name }}</span>
                     </button>
+                </div>
+                <div v-if="process" class="mt-2">
+                    .... Mohon Tunggu
                 </div>
             </div>
         </div>

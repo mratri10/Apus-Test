@@ -70,8 +70,12 @@ function onClear() {
                     <InputError :message="form.errors.name" />
                 </div>
                 <div class="flex flex-row">
-                    <PrimaryButton class="flex justify-center" :disable="form.processing">
-                        {{ form.uuid ? "Update Position" : "Add Position" }}</PrimaryButton>
+                    <h2 v-if="form.processing" :disable="true" class="flex justify-center">
+                        Processing...
+                    </h2>
+                    <PrimaryButton v-else class="flex justify-center" :disable="form.processing">
+                        {{ form.uuid ? "Update Position" : "Add Position" }}
+                    </PrimaryButton>
                     <DangerButton v-if="form.name != ''" type="button" @click="onClear" class="ml-4 flex justify-center"
                         :disable="form.processing">
                         Clear</DangerButton>
