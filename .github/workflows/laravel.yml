@@ -2,12 +2,12 @@ name: Laravel CI/CD
 
 on:
   push:
-    branches: [ main ] # adjust if you use a different branch
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  laravel-tests:
+  laravel-ci:
 
     runs-on: ubuntu-latest
 
@@ -15,9 +15,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: myuser
-          POSTGRES_PASSWORD: mypassword
-          POSTGRES_DB: mydb
+          POSTGRES_USER: ${{ secrets.DB_USERNAME }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DB_DATABASE }}
         ports:
           - 5432:5432
         options: >-
@@ -27,15 +27,23 @@ jobs:
           --health-retries=5
 
     env:
+      APP_ENV: testing
+      APP_NAME: Laravel
+      APP_URL: http://localhost
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: mydb
-      DB_USERNAME: myuser
-      DB_PASSWORD: mypassword
-      APP_URL: http://localhost
-      APP_ENV: testing
-      APP_KEY: base64:Apk6/Z+VbAESaAxDhx6bjhirbsX0qVkWvwFwWTmBlNk=
+      DB_DATABASE: ${{ secrets.DB_DATABASE }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_USERNAME: null
+      MAIL_PASSWORD: null
+      MAIL_ENCRYPTION: null
+      MAIL_FROM_ADDRESS: hello@example.com
+      MAIL_FROM_NAME: Laravel
 
     steps:
     - name: Checkout code
@@ -61,6 +69,30 @@ jobs:
 
     - name: Compile assets
       run: npm run build
+
+    - name: Create .env file
+      run: |
+        echo "APP_NAME=${{ env.APP_NAME }}" >> .env
+        echo "APP_ENV=${{ env.APP_ENV }}" >> .env
+        echo "APP_KEY=" >> .env
+        echo "APP_DEBUG=true" >> .env
+        echo "APP_URL=${{ env.APP_URL }}" >> .env
+        echo "LOG_CHANNEL=stack" >> .env
+        echo "LOG_LEVEL=debug" >> .env
+        echo "DB_CONNECTION=${{ env.DB_CONNECTION }}" >> .env
+        echo "DB_HOST=${{ env.DB_HOST }}" >> .env
+        echo "DB_PORT=${{ env.DB_PORT }}" >> .env
+        echo "DB_DATABASE=${{ env.DB_DATABASE }}" >> .env
+        echo "DB_USERNAME=${{ env.DB_USERNAME }}" >> .env
+        echo "DB_PASSWORD=${{ env.DB_PASSWORD }}" >> .env
+        echo "CACHE_DRIVER=file" >> .env
+        echo "SESSION_DRIVER=file" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+        echo "MAIL_MAILER=${{ env.MAIL_MAILER }}" >> .env
+        echo "MAIL_HOST=${{ env.MAIL_HOST }}" >> .env
+        echo "MAIL_PORT=${{ env.MAIL_PORT }}" >> .env
+        echo "MAIL_FROM_ADDRESS=${{ env.MAIL_FROM_ADDRESS }}" >> .env
+        echo "MAIL_FROM_NAME=${{ env.MAIL_FROM_NAME }}" >> .env
 
     - name: Generate app key
       run: php artisan key:generate
