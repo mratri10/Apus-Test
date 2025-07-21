@@ -1,68 +1,47 @@
-name: Laravel CI
+name: Deploy Laravel App
 
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - main  # or your default branch like "master"
 
 jobs:
-  laravel-ci:
+  deploy:
+    name: Deploy to Server
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: mydb
-          POSTGRES_USER: myuser
-          POSTGRES_PASSWORD: mypassword
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_DATABASE: mydb
-      DB_USERNAME: myuser
-      DB_PASSWORD: mypassword
-      APP_ENV: testing
-      APP_KEY: base64:8XQkUj4+5sM1nXkD3Z0eCrR2kRu0JpOd1FvA9+8AV1g= # or use `php artisan key:generate --show`
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - name: Deploy to production server via SSH
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          php-version: 8.3
-          extensions: mbstring, pdo, pdo_pgsql, pgsql, xml, bcmath, ctype, fileinfo, json, tokenizer, zip
-          coverage: none
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/todo-system
 
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+            echo "🔄 Pulling latest code..."
+            git pull origin main
 
-      - name: Copy .env
-        run: cp .env.example .env
+            echo "📦 Installing dependencies..."
+            composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      - name: Generate application key
-        run: php artisan key:generate
+            echo "🔧 Running Laravel commands..."
+            php artisan migrate --force
+            php artisan config:clear
+            php artisan view:clear
+            php artisan route:clear
+            php artisan optimize:clear
 
-      - name: Wait for PostgreSQL
-        run: |
-          until pg_isready -h 127.0.0.1 -p 5432 -U myuser; do
-            echo "Waiting for PostgreSQL..."
-            sleep 2
-          done
+            echo "🛠️ Building front-end..."
+            npm install
+            npm run build
 
-      - name: Run migrations
-        run: php artisan migrate --force
+            echo "🔁 Restarting PHP and Nginx..."
+            sudo systemctl restart php8.3-fpm
+            sudo systemctl restart nginx
+
+            echo "✅ Deployment completed!"
